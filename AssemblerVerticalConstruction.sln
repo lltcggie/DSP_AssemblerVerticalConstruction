@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31019.35
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{83F3891B-DA64-4FC1-9F67-E742623A3DF7}") = "AssemblerVerticalConstruction", "AssemblerVerticalConstruction.csproj", "{5678B572-A4A6-488A-8229-BE42EB9AEFE3}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5678B572-A4A6-488A-8229-BE42EB9AEFE3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5678B572-A4A6-488A-8229-BE42EB9AEFE3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5678B572-A4A6-488A-8229-BE42EB9AEFE3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5678B572-A4A6-488A-8229-BE42EB9AEFE3}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {41B85643-E89E-44C2-A413-870EC7675BFF}
+	EndGlobalSection
+EndGlobal

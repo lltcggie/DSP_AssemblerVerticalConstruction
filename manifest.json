@@ -1,0 +1,10 @@
+{
+    "name": "AssemblerVerticalConstruction",
+    "version_number": "1.0.7",
+    "website_url": "https://github.com/lltcggie/DSP_AssemblerVerticalConstruction",
+    "description": "Allow Assembler Vertical Construction.",
+    "dependencies": [
+        "xiaoye97-BepInEx-5.4.17",
+        "CommonAPI-DSPModSave-1.2.0"
+    ]
+}
