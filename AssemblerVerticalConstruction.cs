@@ -429,10 +429,13 @@ namespace AssemblerVerticalConstruction
             var assemblerCursor = Traverse.Create(__instance).Field("assemblerCursor").GetValue<int>();
             for (int num17 = 1; num17 < assemblerCursor; num17++)
             {
-                var NextId = assemblerComponentEx.GetNextId(__instance.factory.index, num17);
-                if (_this.assemblerPool[num17].id == num17 && NextId > 0)
+                if (_this.assemblerPool[num17].id == num17)
                 {
-                    assemblerComponentEx.UpdateOutputToNext(__instance, __instance.factory.index, num17, _this.assemblerPool, false);
+                    var NextId = assemblerComponentEx.GetNextId(__instance.factory.index, num17);
+                    if (NextId > 0)
+                    {
+                        assemblerComponentEx.UpdateOutputToNext(__instance, __instance.factory.index, num17, _this.assemblerPool, false);
+                    }
                 }
             }
         }
