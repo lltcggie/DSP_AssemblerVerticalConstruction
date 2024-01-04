@@ -221,8 +221,27 @@ namespace AssemblerVerticalConstruction
                 {
                     if (assemblerPool[assemblerNextId].needs[i] == _this.requires[i] && _this.served[i] >= _this.requireCounts[i] * 1 + transfarCount)
                     {
-                        _this.served[i] -= transfarCount;
+                        if (_this.incServed[i] <= 0)
+                        {
+                            _this.incServed[i] = 0;
+                        }
+
+                        //var args = new object[] { _this.served[i], _this.incServed[i], transfarCount };
+                        //int out_one_inc_level = Traverse.Create(assemblerPool[assemblerNextId]).Method("split_inc_level", new System.Type[] { typeof(int).MakeByRefType(), typeof(int).MakeByRefType(), typeof(int) }).GetValue<int>(args);
+                        //_this.served[i] = (int)args[0];
+                        //_this.incServed[i] = (int)args[1];
+
+                        // MEMO: 本当はassemblerPool[assemblerNextId].split_inc_level()を呼ぶのが正しい。
+                        //       が、split_inc_level()はstaticでいいのにstaticになってない、さらにprivateなのでここから呼び出すのにどうしてもコストがかかる。
+                        //       なのでsplit_inc_level()の実装をそのまま持ってくることにした。
+                        int out_one_inc_level = split_inc_level(ref _this.served[i], ref _this.incServed[i], transfarCount);
+                        if (_this.served[i] == 0)
+                        {
+                            _this.incServed[i] = 0;
+                        }
+
                         assemblerPool[assemblerNextId].served[i] += transfarCount;
+                        assemblerPool[assemblerNextId].incServed[i] += transfarCount * out_one_inc_level;
                     }
                 }
             }
@@ -240,6 +259,17 @@ namespace AssemblerVerticalConstruction
                     }
                 }
             }
+        }
+
+        // AssemblerComponent.split_inc_level()がオリジナル
+        private static int split_inc_level(ref int n, ref int m, int p)
+        {
+            int num = m / n;
+            int num2 = m - num * n;
+            n -= p;
+            num2 -= n;
+            m -= ((num2 > 0) ? (num * p + num2) : (num * p));
+            return num;
         }
     }
 }
