@@ -11,7 +11,7 @@ using UnityEngine;
 
 namespace AssemblerVerticalConstruction
 {
-    [BepInPlugin("lltcggie.DSP.plugin.AssemblerVerticalConstruction", "AssemblerVerticalConstruction", "1.0.8")]
+    [BepInPlugin("lltcggie.DSP.plugin.AssemblerVerticalConstruction", "AssemblerVerticalConstruction", "1.0.9")]
     [BepInDependency(DSPModSavePlugin.MODGUID)]
     [ModSaveSettings(LoadOrder = LoadOrder.Postload)]
     public class AssemblerVerticalConstruction : BaseUnityPlugin, IModCanSave
