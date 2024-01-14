@@ -7,7 +7,7 @@ namespace AssemblerVerticalConstruction
         public int[][] assemblerNextIds = new int[64 * 6][]; // 上に重なってるのがNext
         public int[][] assemblerRootIds = new int[64 * 6][]; // 地面に接してるのがRoot(地面に接してる場合は0)
         public int assemblerCapacity = 64 * 6;
-        public int transfarCount = 4; // 1チックで何個入力、出力を受け渡すか
+        public int transfarCount = 6; // 1チックで何個出力を受け渡すか
 
         public void SetAssemblerCapacity(int newCapacity)
         {
@@ -214,19 +214,25 @@ namespace AssemblerVerticalConstruction
         private void UpdateOutputToNextInner(int assemblerId, int assemblerNextId, AssemblerComponent[] assemblerPool)
         {
             var _this = assemblerPool[assemblerId];
-            if (_this.served != null && assemblerPool[assemblerNextId].served != null)
+            if (_this.served != null && assemblerPool[assemblerNextId].served != null && assemblerPool[assemblerNextId].recipeId == _this.recipeId)
             {
                 int num = _this.served.Length;
                 for (int i = 0; i < num; i++)
                 {
-                    if (assemblerPool[assemblerNextId].needs[i] == _this.requires[i] && _this.served[i] >= _this.requireCounts[i] * 1 + transfarCount)
+                    int needs = assemblerPool[assemblerNextId].needs[i];
+                    int requireCount = assemblerPool[assemblerNextId].requireCounts[i];
+                    int served = _this.served[i];
+                    if (needs > 0 && served > requireCount)
                     {
+                        // assemblerIdに一回製造分より多い在庫があったらneedsを満たすように余りをsemblerNextIdへ送る
+                        int transfar = Math.Min(served - requireCount, needs);
+
                         if (_this.incServed[i] <= 0)
                         {
                             _this.incServed[i] = 0;
                         }
 
-                        //var args = new object[] { _this.served[i], _this.incServed[i], transfarCount };
+                        //var args = new object[] { _this.served[i], _this.incServed[i], transfar };
                         //int out_one_inc_level = Traverse.Create(assemblerPool[assemblerNextId]).Method("split_inc_level", new System.Type[] { typeof(int).MakeByRefType(), typeof(int).MakeByRefType(), typeof(int) }).GetValue<int>(args);
                         //_this.served[i] = (int)args[0];
                         //_this.incServed[i] = (int)args[1];
@@ -234,14 +240,14 @@ namespace AssemblerVerticalConstruction
                         // MEMO: 本当はassemblerPool[assemblerNextId].split_inc_level()を呼ぶのが正しい。
                         //       が、split_inc_level()はstaticでいいのにstaticになってない、さらにprivateなのでここから呼び出すのにどうしてもコストがかかる。
                         //       なのでsplit_inc_level()の実装をそのまま持ってくることにした。
-                        int out_one_inc_level = split_inc_level(ref _this.served[i], ref _this.incServed[i], transfarCount);
+                        int out_one_inc_level = split_inc_level(ref _this.served[i], ref _this.incServed[i], transfar);
                         if (_this.served[i] == 0)
                         {
                             _this.incServed[i] = 0;
                         }
 
-                        assemblerPool[assemblerNextId].served[i] += transfarCount;
-                        assemblerPool[assemblerNextId].incServed[i] += transfarCount * out_one_inc_level;
+                        assemblerPool[assemblerNextId].served[i] += transfar;
+                        assemblerPool[assemblerNextId].incServed[i] += transfar * out_one_inc_level;
                     }
                 }
             }
