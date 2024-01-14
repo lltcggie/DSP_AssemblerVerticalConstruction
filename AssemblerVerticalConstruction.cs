@@ -16,7 +16,7 @@ namespace AssemblerVerticalConstruction
     [ModSaveSettings(LoadOrder = LoadOrder.Postload)]
     public class AssemblerVerticalConstruction : BaseUnityPlugin, IModCanSave
     {
-        public static readonly int CurrentSavedataVersion = 1;
+        public static readonly int CurrentSavedataVersion = 2;
 
         public static ConfigEntry<bool> IsResetNextIds;
 
@@ -59,7 +59,14 @@ namespace AssemblerVerticalConstruction
             }
 
             var version = binaryReader.ReadInt32() * -1; // 正数だとassemblerCapacityと誤認する恐れがあるので負数で扱う
-            if (version != CurrentSavedataVersion)
+            if (version < CurrentSavedataVersion)
+            {
+                Logger.LogInfo(string.Format("Old save data version: read {0} current {1}", version, CurrentSavedataVersion));
+                Logger.LogInfo("ResetNextIds");
+                AssemblerPatches.ResetNextIds();
+                return;
+            }
+            else if (version != CurrentSavedataVersion)
             {
                 Logger.LogWarning(string.Format("Invalid save data version: read {0} current {1}", version, CurrentSavedataVersion));
                 Logger.LogInfo("ResetNextIds");
@@ -81,7 +88,7 @@ namespace AssemblerVerticalConstruction
                 {
                     var nextId = binaryReader.ReadInt32();
                     var rootId = binaryReader.ReadInt32();
-                    AssemblerPatches.assemblerComponentEx.SetAssemblerNextAndRootId(i, j, rootId, nextId);
+                    AssemblerPatches.assemblerComponentEx.SetAssemblerNextAndRootId(i, j, nextId, rootId);
                 }
             }
         }
@@ -109,7 +116,6 @@ namespace AssemblerVerticalConstruction
                 }
                 else
                 {
-                    binaryWriter.Write(0);
                     binaryWriter.Write(0);
                 }
             }
