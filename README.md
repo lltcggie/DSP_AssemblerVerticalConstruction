@@ -7,6 +7,9 @@ Originally released by FYJ95 [here](https://dsp.thunderstore.io/package/57a103a4
 
 ## 更新履歴
 
+### v1.1.0
+- スタックしたアセンブラのレシピが空になることがあるバグを修正
+
 ### v1.0.9
 - セーブとロードが正しく動作していなかったバグを修正
 - アセンブラ間の素材の受け渡し量を調整
