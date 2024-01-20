@@ -5,26 +5,18 @@ namespace AssemblerVerticalConstruction
     public class AssemblerComponentEx
     {
         public int[][] assemblerNextIds = new int[64 * 6][]; // 上に重なってるのがNext
-        public int[][] assemblerRootIds = new int[64 * 6][]; // 地面に接してるのがRoot(地面に接してる場合は0)
         public int assemblerCapacity = 64 * 6;
         public int transfarCount = 6; // 1チックで何個出力を受け渡すか
 
         public void SetAssemblerCapacity(int newCapacity)
         {
             var oldAssemblerNextIds = this.assemblerNextIds;
-            var oldAssemblerRootIds = this.assemblerRootIds;
 
             this.assemblerNextIds = new int[newCapacity][];
-            this.assemblerRootIds = new int[newCapacity][];
 
             if (oldAssemblerNextIds != null)
             {
                 Array.Copy(oldAssemblerNextIds, this.assemblerNextIds, (newCapacity <= this.assemblerCapacity) ? newCapacity : assemblerCapacity);
-            }
-
-            if (oldAssemblerRootIds != null)
-            {
-                Array.Copy(oldAssemblerRootIds, this.assemblerRootIds, (newCapacity <= this.assemblerCapacity) ? newCapacity : assemblerCapacity);
             }
 
             this.assemblerCapacity = newCapacity;
@@ -45,19 +37,64 @@ namespace AssemblerVerticalConstruction
             return this.assemblerNextIds[index][assemblerId];
         }
 
-        public int GetRootId(int index, int assemblerId)
+        public static void FindRecipeIdForBuild(FactorySystem factorySystem, int assemblerId)
         {
-            if (index >= assemblerRootIds.Length)
+            // 上下のアセンブラからレシピを設定
+            // LabComponent.FindLabFunctionsForBuild()を参考に実装
+            // 自身から下、
+            var _this = factorySystem;
+            int entityId = _this.assemblerPool[assemblerId].entityId;
+            if (entityId == 0)
             {
-                return 0;
+                return;
             }
 
-            if (this.assemblerRootIds[index] == null || assemblerId >= this.assemblerRootIds[index].Length)
-            {
-                return 0;
-            }
+            bool isOutput;
+            int otherObjId;
+            int otherSlot;
 
-            return this.assemblerRootIds[index][assemblerId];
+            // まずは自身から下へ辿っていく
+            int objId = entityId;
+            do
+            {
+
+                _this.factory.ReadObjectConn(objId, PlanetFactory.kMultiLevelInputSlot, out isOutput, out otherObjId, out otherSlot);
+                objId = otherObjId;
+                if (objId > 0)
+                {
+                    int assemblerId2 = _this.factory.entityPool[objId].assemblerId;
+                    if (assemblerId2 > 0 && _this.assemblerPool[assemblerId2].id == assemblerId2)
+                    {
+                        if (_this.assemblerPool[assemblerId2].recipeId > 0)
+                        {
+                            _this.assemblerPool[assemblerId].SetRecipe(_this.assemblerPool[assemblerId2].recipeId, _this.factory.entitySignPool);
+                            return;
+                        }
+                    }
+                }
+            }
+            while (objId != 0);
+
+            // 駄目だったら自身から上へ辿っていく
+            objId = entityId;
+            do
+            {
+                _this.factory.ReadObjectConn(objId, PlanetFactory.kMultiLevelInputSlot, out isOutput, out otherObjId, out otherSlot);
+                objId = otherObjId;
+                if (objId > 0)
+                {
+                    int assemblerId3 = _this.factory.entityPool[objId].assemblerId;
+                    if (assemblerId3 > 0 && _this.assemblerPool[assemblerId3].id == assemblerId3)
+                    {
+                        if (_this.assemblerPool[assemblerId3].recipeId > 0)
+                        {
+                            _this.assemblerPool[assemblerId].SetRecipe(_this.assemblerPool[assemblerId3].recipeId, _this.factory.entitySignPool);
+                            return;
+                        }
+                    }
+                }
+            }
+            while (objId != 0);
         }
 
         public void SetAssemblerInsertTarget(PlanetFactory __instance, int assemblerId, int nextEntityId)
@@ -80,44 +117,9 @@ namespace AssemblerVerticalConstruction
 
                     this.assemblerNextIds[index][assemblerId] = nextAssemblerId;
 
-                    // つながってるということはRootは同じはず
-                    var assemblerRootId = this.assemblerRootIds[index][assemblerId];
-                    if (assemblerRootId == 0)
-                    {
-                        // assemblerRootIdが0ということはassemblerIdがRootなのでassemblerIdを使う
-                        assemblerRootId = assemblerId;
-                    }
-
-                    this.assemblerRootIds[index][nextAssemblerId] = assemblerRootId;
-
-                    // Rootと同じレシピにする
-                    if (nextAssemblerId != 0 && assemblerRootId != 0 && __instance.factorySystem.assemblerPool[assemblerRootId].recipeId != __instance.factorySystem.assemblerPool[nextAssemblerId].recipeId)
-                    {
-                        __instance.factorySystem.assemblerPool[nextAssemblerId].SetRecipe(__instance.factorySystem.assemblerPool[assemblerRootId].recipeId, __instance.factorySystem.factory.entitySignPool);
-                    }
+                    // 同じレシピにする
+                    FindRecipeIdForBuild(__instance.factorySystem, assemblerId);
                 }
-            }
-        }
-
-        public void SetAssemblerRecipe(PlanetFactory __instance, int assemblerId)
-        {
-            if (assemblerId <= 0)
-            {
-                return;
-            }
-
-            var index = __instance.factorySystem.factory.index;
-
-            var assemblerRootId = this.assemblerRootIds[index][assemblerId];
-            if (assemblerRootId == 0)
-            {
-                return;
-            }
-
-            // Rootと同じレシピにする
-            if (__instance.factorySystem.assemblerPool[assemblerRootId].recipeId != __instance.factorySystem.assemblerPool[assemblerId].recipeId)
-            {
-                __instance.factorySystem.assemblerPool[assemblerId].SetRecipe(__instance.factorySystem.assemblerPool[assemblerRootId].recipeId, __instance.factorySystem.factory.entitySignPool);
             }
         }
 
@@ -127,11 +129,10 @@ namespace AssemblerVerticalConstruction
             if (assemblerId != 0 && __instance.factorySystem.assemblerPool[assemblerId].id == assemblerId)
             {
                 this.assemblerNextIds[index][assemblerId] = 0;
-                this.assemblerRootIds[index][assemblerRemoveId] = 0;
             }
         }
 
-        public void SetAssemblerNextAndRootId(int index, int assemblerId, int nextId, int rootId)
+        public void SetAssemblerNext(int index, int assemblerId, int nextId)
         {
             if (index >= assemblerNextIds.Length)
             {
@@ -152,22 +153,7 @@ namespace AssemblerVerticalConstruction
                 }
             }
 
-            if (assemblerRootIds[index] == null || assemblerId >= assemblerRootIds[index].Length)
-            {
-                var array = this.assemblerRootIds[index];
-
-                var newCapacity = assemblerId * 2;
-                newCapacity = newCapacity > 256 ? newCapacity : 256;
-                this.assemblerRootIds[index] = new int[newCapacity];
-                if (array != null)
-                {
-                    var len = array.Length;
-                    Array.Copy(array, this.assemblerRootIds[index], (newCapacity <= len) ? newCapacity : len);
-                }
-            }
-
             this.assemblerNextIds[index][assemblerId] = nextId;
-            this.assemblerRootIds[index][assemblerId] = rootId;
         }
 
         public void UpdateOutputToNext(FactorySystem __instance, int planeIndex, int assemblerId, AssemblerComponent[] assemblerPool, bool useMutex)

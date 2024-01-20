@@ -16,7 +16,7 @@ namespace AssemblerVerticalConstruction
     [ModSaveSettings(LoadOrder = LoadOrder.Postload)]
     public class AssemblerVerticalConstruction : BaseUnityPlugin, IModCanSave
     {
-        public static readonly int CurrentSavedataVersion = 2;
+        public static readonly int CurrentSavedataVersion = 3;
 
         public static ConfigEntry<bool> IsResetNextIds;
 
@@ -87,8 +87,7 @@ namespace AssemblerVerticalConstruction
                 for (int j = 0; j < num; j++)
                 {
                     var nextId = binaryReader.ReadInt32();
-                    var rootId = binaryReader.ReadInt32();
-                    AssemblerPatches.assemblerComponentEx.SetAssemblerNextAndRootId(i, j, nextId, rootId);
+                    AssemblerPatches.assemblerComponentEx.SetAssemblerNext(i, j, nextId);
                 }
             }
         }
@@ -111,7 +110,6 @@ namespace AssemblerVerticalConstruction
                     for (int j = 0; j < AssemblerPatches.assemblerComponentEx.assemblerNextIds[i].Length; j++)
                     {
                         binaryWriter.Write(AssemblerPatches.assemblerComponentEx.assemblerNextIds[i][j]);
-                        binaryWriter.Write(AssemblerPatches.assemblerComponentEx.assemblerRootIds[i][j]);
                     }
                 }
                 else
@@ -237,7 +235,7 @@ namespace AssemblerVerticalConstruction
                     continue;
                 }
 
-                var factoryIndex = GameMain.data.factories[i].factorySystem.factory.index;
+                var factoryIndex = _this.factory.index;
                 int[] assemblerPrevIds = new int[assemblerComponentEx.assemblerNextIds[factoryIndex].Length];
 
                 var assemblerCapacity = Traverse.Create(_this).Field("assemblerCapacity").GetValue<int>();
@@ -259,7 +257,7 @@ namespace AssemblerVerticalConstruction
                         bool isOutput;
                         int otherObjId;
                         int otherSlot;
-                        _this.factory.ReadObjectConn(nextEntityId, 15, out isOutput, out otherObjId, out otherSlot);
+                        _this.factory.ReadObjectConn(nextEntityId, PlanetFactory.kMultiLevelOutputSlot, out isOutput, out otherObjId, out otherSlot);
 
                         nextEntityId = otherObjId;
 
@@ -271,7 +269,7 @@ namespace AssemblerVerticalConstruction
                             {
                                 // まだRootは特定できないので0にしておく
                                 // MEMO: まだRootが特定できないのでassemblerComponentEx.SetAssemblerInsertTarget()は呼び出せない
-                                assemblerComponentEx.SetAssemblerNextAndRootId(factoryIndex, prevAssemblerId, nextAssemblerId, 0);
+                                assemblerComponentEx.SetAssemblerNext(factoryIndex, prevAssemblerId, nextAssemblerId);
                                 assemblerPrevIds[nextAssemblerId] = prevAssemblerId;
                             }
                         }
@@ -279,21 +277,18 @@ namespace AssemblerVerticalConstruction
                     while (nextEntityId != 0);
                 }
 
-                // assemblerRootIdsの生成&レシピの設定
+                // レシピの設定(一番下のアセンブラのレシピに合わせる)
                 var lenAssemblerPrevIds = assemblerPrevIds.Length;
                 for (int j = 1; j < lenAssemblerPrevIds; j++)
                 {
                     var assemblerPrevId = assemblerPrevIds[j];
                     if (assemblerPrevId == 0 && _this.assemblerPool[assemblerPrevId].id == assemblerPrevId)
                     {
+                        // Rootを見つけたらそこから子を辿ってレシピを設定する
                         var assemblerNextId = assemblerComponentEx.GetNextId(factoryIndex, j);
-
-                        // Rootを見つけたらそこから子を辿っていく
                         while (assemblerNextId != 0)
                         {
-                            int nextEntityId = _this.assemblerPool[assemblerNextId].entityId;
-                            assemblerComponentEx.SetAssemblerInsertTarget(GameMain.data.factories[i], assemblerPrevId, nextEntityId);
-                            assemblerPrevId = assemblerNextId;
+                            AssemblerComponentEx.FindRecipeIdForBuild(_this, assemblerNextId);
                             assemblerNextId = assemblerComponentEx.GetNextId(factoryIndex, assemblerNextId);
                         }
                     }
@@ -364,13 +359,6 @@ namespace AssemblerVerticalConstruction
                 Array.Copy(oldAssemblerNextIds, assemblerComponentEx.assemblerNextIds[index], (newCapacity <= assemblerCapacity) ? newCapacity : assemblerCapacity);
             }
 
-            int[] oldAssemblerRootIds = assemblerComponentEx.assemblerRootIds[index];
-            assemblerComponentEx.assemblerRootIds[index] = new int[newCapacity];
-            if (oldAssemblerRootIds != null)
-            {
-                Array.Copy(oldAssemblerRootIds, assemblerComponentEx.assemblerRootIds[index], (newCapacity <= assemblerCapacity) ? newCapacity : assemblerCapacity);
-            }
-
             return true;
         }
 
@@ -384,10 +372,28 @@ namespace AssemblerVerticalConstruction
                     Assert.CannotBeReached();
                     insertTarget = 0;
                 }
-                int assemblerId = __instance.entityPool[entityId].assemblerId;
-                if (assemblerId > 0 && __instance.entityPool[insertTarget].assemblerId > 0)
+                else
                 {
-                    assemblerComponentEx.SetAssemblerInsertTarget(__instance, assemblerId, insertTarget);
+                    // MEMO: PlanetFactory.ApplyEntityOutput()から呼ばれるかPlanetFactory.ApplyEntityInput()からでentityIdとinsertTargetが入れ替わる
+                    //       なのでどっちが上なのか下なのか判定しないといけない
+                    //       このプログラムではinsertTargetが上(next)という想定
+                    bool isOutput;
+                    int otherObjId;
+                    int otherSlot;
+                    __instance.ReadObjectConn(entityId, PlanetFactory.kMultiLevelOutputSlot, out isOutput, out otherObjId, out otherSlot);
+                    if (!(isOutput && otherObjId == insertTarget))
+                    {
+                        // Swap
+                        int temp = insertTarget;
+                        insertTarget = entityId;
+                        entityId = temp;
+                    }
+
+                    int assemblerId = __instance.entityPool[entityId].assemblerId;
+                    if (assemblerId > 0 && __instance.entityPool[insertTarget].assemblerId > 0)
+                    {
+                        assemblerComponentEx.SetAssemblerInsertTarget(__instance, assemblerId, insertTarget);
+                    }
                 }
             }
             return true;
@@ -425,7 +431,7 @@ namespace AssemblerVerticalConstruction
             // プレビルド設置後にレシピ再設定
             // MEMO: プレビルドだった場合ApplyInsertTarget()後にレシピがプレビルドのものに上書きされてしまうのでここで再設定する必要がある
             int assemblerId = __instance.entityPool[entityId].assemblerId;
-            assemblerComponentEx.SetAssemblerRecipe(__instance, assemblerId);
+            AssemblerComponentEx.FindRecipeIdForBuild(__instance.factorySystem, assemblerId);
         }
 
         [HarmonyPostfix, HarmonyPatch(typeof(FactorySystem), "GameTick", new Type[] { typeof(long), typeof(bool) })]
@@ -486,7 +492,7 @@ namespace AssemblerVerticalConstruction
                 bool flag;
                 int num3;
                 int num4;
-                _this.factory.ReadObjectConn(num, 14, out flag, out num3, out num4);
+                _this.factory.ReadObjectConn(num, PlanetFactory.kMultiLevelInputSlot, out flag, out num3, out num4);
                 num = num3;
                 if (num > 0)
                 {
@@ -517,7 +523,7 @@ namespace AssemblerVerticalConstruction
                 bool flag;
                 int num3;
                 int num4;
-                _this.factory.ReadObjectConn(num, 15, out flag, out num3, out num4);
+                _this.factory.ReadObjectConn(num, PlanetFactory.kMultiLevelOutputSlot, out flag, out num3, out num4);
                 num = num3;
                 if (num > 0)
                 {
@@ -629,11 +635,11 @@ namespace AssemblerVerticalConstruction
                             int verticalCount = 0;
                             if (buildPreview.inputObjId != 0)
                             {
-                                __instance.factory.ReadObjectConn(buildPreview.inputObjId, 14, out var isOutput, out var otherObjId, out var otherSlot);
+                                __instance.factory.ReadObjectConn(buildPreview.inputObjId, PlanetFactory.kMultiLevelInputSlot, out var isOutput, out var otherObjId, out var otherSlot);
                                 while (otherObjId != 0)
                                 {
                                     verticalCount++;
-                                    __instance.factory.ReadObjectConn(otherObjId, 14, out isOutput, out otherObjId, out otherSlot);
+                                    __instance.factory.ReadObjectConn(otherObjId, PlanetFactory.kMultiLevelInputSlot, out isOutput, out otherObjId, out otherSlot);
                                 }
                             }
 
