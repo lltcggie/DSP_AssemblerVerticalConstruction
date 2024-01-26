@@ -437,24 +437,31 @@ namespace AssemblerVerticalConstruction
         [HarmonyPostfix, HarmonyPatch(typeof(FactorySystem), "GameTick", new Type[] { typeof(long), typeof(bool) })]
         public static void GameTickPatch(FactorySystem __instance, long time, bool isActive)
         {
-            var _this = __instance;
+            PerformanceMonitor.BeginSample(ECpuWorkEntry.Assembler);
+            var factory = __instance.factory;
+            var factoryIndex = factory.index;
+            var assemblerPool = __instance.assemblerPool;
             var assemblerCursor = Traverse.Create(__instance).Field("assemblerCursor").GetValue<int>();
             for (int num17 = 1; num17 < assemblerCursor; num17++)
             {
-                if (_this.assemblerPool[num17].id == num17)
+                if (assemblerPool[num17].id == num17)
                 {
-                    var NextId = assemblerComponentEx.GetNextId(__instance.factory.index, num17);
+                    var NextId = assemblerComponentEx.GetNextId(factoryIndex, num17);
                     if (NextId > 0)
                     {
-                        assemblerComponentEx.UpdateOutputToNext(__instance, __instance.factory.index, num17, _this.assemblerPool, false);
+                        assemblerComponentEx.UpdateOutputToNext(factory, factoryIndex, num17, assemblerPool, NextId, false);
                     }
                 }
             }
+            PerformanceMonitor.EndSample(ECpuWorkEntry.Assembler);
         }
 
         [HarmonyPostfix, HarmonyPatch(typeof(FactorySystem), "GameTick", new Type[] { typeof(long), typeof(bool), typeof(int), typeof(int), typeof(int) })]
         public static void GameTickPatch(FactorySystem __instance, long time, bool isActive, int _usedThreadCnt, int _curThreadIdx, int _minimumMissionCnt)
         {
+            var factory = __instance.factory;
+            var factoryIndex = factory.index;
+            var assemblerPool = __instance.assemblerPool;
             var assemblerCursor = Traverse.Create(__instance).Field("assemblerCursor").GetValue<int>();
 
             if (WorkerThreadExecutor.CalculateMissionIndex(1, assemblerCursor - 1, _usedThreadCnt, _curThreadIdx, _minimumMissionCnt, out var _start, out var _end))
@@ -468,10 +475,10 @@ namespace AssemblerVerticalConstruction
                         useMutex = false;
                     }
 
-                    var NextId = assemblerComponentEx.GetNextId(__instance.factory.index, i);
-                    if (__instance.assemblerPool[i].id == i && NextId > 0)
+                    var NextId = assemblerComponentEx.GetNextId(factoryIndex, i);
+                    if (assemblerPool[i].id == i && NextId > 0)
                     {
-                        assemblerComponentEx.UpdateOutputToNext(__instance, __instance.factory.index, i, __instance.assemblerPool, useMutex);
+                        assemblerComponentEx.UpdateOutputToNext(factory, factoryIndex, i, assemblerPool, NextId, useMutex);
                     }
                 }
             }

@@ -156,99 +156,75 @@ namespace AssemblerVerticalConstruction
             this.assemblerNextIds[index][assemblerId] = nextId;
         }
 
-        public void UpdateOutputToNext(FactorySystem __instance, int planeIndex, int assemblerId, AssemblerComponent[] assemblerPool, bool useMutex)
+        public void UpdateOutputToNext(PlanetFactory factory, int planeIndex, int assemblerId, AssemblerComponent[] assemblerPool, int assemblerNextId, bool useMutex)
         {
-            if (planeIndex >= assemblerNextIds.Length || assemblerNextIds[planeIndex] == null || assemblerId >= assemblerNextIds[planeIndex].Length || assemblerId >= assemblerPool.Length)
+            if (useMutex)
             {
-                return;
-            }
+                var entityId = assemblerPool[assemblerId].entityId;
+                var entityNextId = assemblerPool[assemblerNextId].entityId;
 
-            var assemblerNextId = assemblerNextIds[planeIndex][assemblerId];
-            if (assemblerNextId >= assemblerPool.Length)
-            {
-                return;
-            }
-
-            if (assemblerPool[assemblerNextId].id == 0 || assemblerPool[assemblerNextId].id != assemblerNextId)
-            {
-                Assert.CannotBeReached();
-                this.assemblerNextIds[planeIndex][assemblerId] = 0;
-            }
-
-            if (assemblerPool[assemblerNextId].needs != null && assemblerPool[assemblerId].recipeId == assemblerPool[assemblerNextId].recipeId)
-            {
-                if (useMutex)
+                lock (factory.entityMutexs[entityId])
                 {
-                    var entityId = assemblerPool[assemblerId].entityId;
-                    var entityNextId = assemblerPool[assemblerNextId].entityId;
-
-                    lock (__instance.factory.entityMutexs[entityId])
+                    lock (factory.entityMutexs[entityNextId])
                     {
-                        lock (__instance.factory.entityMutexs[entityNextId])
-                        {
-                            UpdateOutputToNextInner(assemblerId, assemblerNextId, assemblerPool);
-                        }
+                        UpdateOutputToNextInner(assemblerId, assemblerNextId, assemblerPool);
                     }
                 }
-                else
-                {
-                    UpdateOutputToNextInner(assemblerId, assemblerNextId, assemblerPool);
-                }
+            }
+            else
+            {
+                UpdateOutputToNextInner(assemblerId, assemblerNextId, assemblerPool);
             }
         }
 
         private void UpdateOutputToNextInner(int assemblerId, int assemblerNextId, AssemblerComponent[] assemblerPool)
         {
             var _this = assemblerPool[assemblerId];
-            if (_this.served != null && assemblerPool[assemblerNextId].served != null && assemblerPool[assemblerNextId].recipeId == _this.recipeId)
+            int num = _this.served.Length;
+            for (int i = 0; i < num; i++)
             {
-                int num = _this.served.Length;
-                for (int i = 0; i < num; i++)
+                int needs = assemblerPool[assemblerNextId].needs[i];
+                int requireCount = assemblerPool[assemblerNextId].requireCounts[i];
+                int served = _this.served[i];
+                if (needs > 0 && served > requireCount)
                 {
-                    int needs = assemblerPool[assemblerNextId].needs[i];
-                    int requireCount = assemblerPool[assemblerNextId].requireCounts[i];
-                    int served = _this.served[i];
-                    if (needs > 0 && served > requireCount)
+                    ref int incServed = ref _this.incServed[i];
+
+                    // assemblerIdに一回製造分より多い在庫があったらneedsを満たすように余りをsemblerNextIdへ送る
+                    int transfar = Math.Min(served - requireCount, needs);
+
+                    if (incServed <= 0)
                     {
-                        // assemblerIdに一回製造分より多い在庫があったらneedsを満たすように余りをsemblerNextIdへ送る
-                        int transfar = Math.Min(served - requireCount, needs);
-
-                        if (_this.incServed[i] <= 0)
-                        {
-                            _this.incServed[i] = 0;
-                        }
-
-                        //var args = new object[] { _this.served[i], _this.incServed[i], transfar };
-                        //int out_one_inc_level = Traverse.Create(assemblerPool[assemblerNextId]).Method("split_inc_level", new System.Type[] { typeof(int).MakeByRefType(), typeof(int).MakeByRefType(), typeof(int) }).GetValue<int>(args);
-                        //_this.served[i] = (int)args[0];
-                        //_this.incServed[i] = (int)args[1];
-
-                        // MEMO: 本当はassemblerPool[assemblerNextId].split_inc_level()を呼ぶのが正しい。
-                        //       が、split_inc_level()はstaticでいいのにstaticになってない、さらにprivateなのでここから呼び出すのにどうしてもコストがかかる。
-                        //       なのでsplit_inc_level()の実装をそのまま持ってくることにした。
-                        int out_one_inc_level = split_inc_level(ref _this.served[i], ref _this.incServed[i], transfar);
-                        if (_this.served[i] == 0)
-                        {
-                            _this.incServed[i] = 0;
-                        }
-
-                        assemblerPool[assemblerNextId].served[i] += transfar;
-                        assemblerPool[assemblerNextId].incServed[i] += transfar * out_one_inc_level;
+                        incServed = 0;
                     }
+
+                    //var args = new object[] { _this.served[i], _this.incServed[i], transfar };
+                    //int out_one_inc_level = Traverse.Create(assemblerPool[assemblerNextId]).Method("split_inc_level", new System.Type[] { typeof(int).MakeByRefType(), typeof(int).MakeByRefType(), typeof(int) }).GetValue<int>(args);
+                    //_this.served[i] = (int)args[0];
+                    //_this.incServed[i] = (int)args[1];
+
+                    // MEMO: 本当はassemblerPool[assemblerNextId].split_inc_level()を呼ぶのが正しい。
+                    //       が、split_inc_level()はstaticでいいのにstaticになってない、さらにprivateなのでここから呼び出すのにどうしてもコストがかかる。
+                    //       なのでsplit_inc_level()の実装をそのまま持ってくることにした。
+                    int out_one_inc_level = split_inc_level(ref _this.served[i], ref incServed, transfar);
+                    if (_this.served[i] == 0)
+                    {
+                        incServed = 0;
+                    }
+
+                    assemblerPool[assemblerNextId].served[i] += transfar;
+                    assemblerPool[assemblerNextId].incServed[i] += transfar * out_one_inc_level;
                 }
             }
 
-            if (_this.produced != null && assemblerPool[assemblerNextId].produced != null)
+            for (int l = 0; l < _this.productCounts.Length; l++)
             {
-                for (int l = 0; l < _this.productCounts.Length; l++)
+                var maxCount = _this.productCounts[l] * 9;
+                if (_this.produced[l] < maxCount && assemblerPool[assemblerNextId].produced[l] > 0)
                 {
-                    var maxCount = _this.productCounts[l] * 9;
-                    if (_this.produced[l] < maxCount && assemblerPool[assemblerNextId].produced[l] > 0)
-                    {
-                        var count = Math.Min(transfarCount, assemblerPool[assemblerNextId].produced[l]);
-                        _this.produced[l] += count;
-                        assemblerPool[assemblerNextId].produced[l] -= count;
-                    }
+                    var count = Math.Min(transfarCount, assemblerPool[assemblerNextId].produced[l]);
+                    _this.produced[l] += count;
+                    assemblerPool[assemblerNextId].produced[l] -= count;
                 }
             }
         }
