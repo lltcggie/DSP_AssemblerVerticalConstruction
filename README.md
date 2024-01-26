@@ -7,6 +7,9 @@ Originally released by FYJ95 [here](https://dsp.thunderstore.io/package/57a103a4
 
 ## 更新履歴
 
+### v1.1.1
+- 処理速度を高速化
+
 ### v1.1.0
 - スタックしたアセンブラのレシピが空になることがあるバグを修正
 
