@@ -180,6 +180,11 @@ namespace AssemblerVerticalConstruction
         private void UpdateOutputToNextInner(int assemblerId, int assemblerNextId, AssemblerComponent[] assemblerPool)
         {
             var _this = assemblerPool[assemblerId];
+            if (_this.served == null) // MEMO: レシピが空の場合はservedがnullになっている
+            {
+                return;
+            }
+
             int num = _this.served.Length;
             for (int i = 0; i < num; i++)
             {
