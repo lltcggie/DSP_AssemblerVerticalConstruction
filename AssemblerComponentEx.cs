@@ -185,28 +185,30 @@ namespace AssemblerVerticalConstruction
                 return;
             }
 
+            var nextAssembler = assemblerPool[assemblerNextId];
+
             int num = _this.served.Length;
             for (int i = 0; i < num; i++)
             {
-                int needs = assemblerPool[assemblerNextId].needs[i];
-                int requireCount = assemblerPool[assemblerNextId].requireCounts[i];
+                int requireCount = _this.requireCounts[i];
                 int served = _this.served[i];
-                if (needs > 0 && served > requireCount)
+                int nextNeeds = getNeedsCount(nextAssembler, i) - nextAssembler.served[i];
+                if (nextNeeds > 0 && served > requireCount)
                 {
                     ref int incServed = ref _this.incServed[i];
 
-                    // assemblerIdに一回製造分より多い在庫があったらneedsを満たすように余りをsemblerNextIdへ送る
-                    int transfar = Math.Min(served - requireCount, needs);
+                    // assemblerIdに一回製造分より多い在庫があったらnextNeedsを満たすように余りをsemblerNextIdへ送る
+                    int transfar = Math.Min(served - requireCount, nextNeeds);
 
                     if (incServed <= 0)
                     {
                         incServed = 0;
                     }
 
-                    //var args = new object[] { _this.served[i], _this.incServed[i], transfar };
+                    //var args = new object[] { _this.served[i], incServed, transfar };
                     //int out_one_inc_level = Traverse.Create(assemblerPool[assemblerNextId]).Method("split_inc_level", new System.Type[] { typeof(int).MakeByRefType(), typeof(int).MakeByRefType(), typeof(int) }).GetValue<int>(args);
                     //_this.served[i] = (int)args[0];
-                    //_this.incServed[i] = (int)args[1];
+                    //incServed = (int)args[1];
 
                     // MEMO: 本当はassemblerPool[assemblerNextId].split_inc_level()を呼ぶのが正しい。
                     //       が、split_inc_level()はstaticでいいのにstaticになってない、さらにprivateなのでここから呼び出すのにどうしてもコストがかかる。
@@ -232,6 +234,14 @@ namespace AssemblerVerticalConstruction
                     assemblerPool[assemblerNextId].produced[l] -= count;
                 }
             }
+        }
+
+        // アセンブラが保管する素材のバッファの基本的な上限
+        // AssemblerComponent.UpdateNeeds()のコードが元
+        private static int getNeedsCount(AssemblerComponent assembler, int index)
+        {
+            int num2 = 4 * assembler.speedOverride / 10000;
+            return assembler.requireCounts[index] * num2;
         }
 
         // AssemblerComponent.split_inc_level()がオリジナル
