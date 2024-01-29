@@ -7,6 +7,10 @@ Originally released by FYJ95 [here](https://dsp.thunderstore.io/package/57a103a4
 
 ## 更新履歴
 
+### v1.1.2
+- レシピが空のアセンブラの上にアセンブラをスタックするとエラーが発生するの修正
+- スタックしたアセンブラが過剰な数の素材を在庫として持つのを修正
+
 ### v1.1.1
 - 処理速度を高速化
 
