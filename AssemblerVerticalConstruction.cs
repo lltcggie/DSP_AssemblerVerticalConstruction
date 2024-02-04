@@ -441,7 +441,7 @@ namespace AssemblerVerticalConstruction
             var factory = __instance.factory;
             var factoryIndex = factory.index;
             var assemblerPool = __instance.assemblerPool;
-            var assemblerCursor = Traverse.Create(__instance).Field("assemblerCursor").GetValue<int>();
+            var assemblerCursor = __instance.assemblerCursor;
             for (int num17 = 1; num17 < assemblerCursor; num17++)
             {
                 if (assemblerPool[num17].id == num17)
@@ -462,7 +462,7 @@ namespace AssemblerVerticalConstruction
             var factory = __instance.factory;
             var factoryIndex = factory.index;
             var assemblerPool = __instance.assemblerPool;
-            var assemblerCursor = Traverse.Create(__instance).Field("assemblerCursor").GetValue<int>();
+            var assemblerCursor = __instance.assemblerCursor;
 
             if (WorkerThreadExecutor.CalculateMissionIndex(1, assemblerCursor - 1, _usedThreadCnt, _curThreadIdx, _minimumMissionCnt, out var _start, out var _end))
             {
