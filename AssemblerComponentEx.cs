@@ -200,7 +200,7 @@ namespace AssemblerVerticalConstruction
                 {
                     ref int incServed = ref _this.incServed[i];
 
-                    // assemblerIdに素材の在庫があったらnextNeedsを満たすようにassemblerNextIdへ送る
+                    // assemblerIdに素材の在庫があったらnextNeedsを満たすようにnextAssemblerへ送る
                     int transfar = Math.Min(served, nextNeeds);
 
                     if (incServed <= 0)
@@ -209,11 +209,11 @@ namespace AssemblerVerticalConstruction
                     }
 
                     //var args = new object[] { _this.served[i], incServed, transfar };
-                    //int out_one_inc_level = Traverse.Create(assemblerPool[assemblerNextId]).Method("split_inc_level", new System.Type[] { typeof(int).MakeByRefType(), typeof(int).MakeByRefType(), typeof(int) }).GetValue<int>(args);
+                    //int out_one_inc_level = Traverse.Create(nextAssembler).Method("split_inc_level", new System.Type[] { typeof(int).MakeByRefType(), typeof(int).MakeByRefType(), typeof(int) }).GetValue<int>(args);
                     //_this.served[i] = (int)args[0];
                     //incServed = (int)args[1];
 
-                    // MEMO: 本当はassemblerPool[assemblerNextId].split_inc_level()を呼ぶのが正しい。
+                    // MEMO: 本当はnextAssembler.split_inc_level()を呼ぶのが正しい。
                     //       が、split_inc_level()はstaticでいいのにstaticになってない、さらにprivateなのでここから呼び出すのにどうしてもコストがかかる。
                     //       なのでsplit_inc_level()の実装をそのまま持ってくることにした。
                     int out_one_inc_level = split_inc_level(ref _this.served[i], ref incServed, transfar);
@@ -222,8 +222,8 @@ namespace AssemblerVerticalConstruction
                         incServed = 0;
                     }
 
-                    assemblerPool[assemblerNextId].served[i] += transfar;
-                    assemblerPool[assemblerNextId].incServed[i] += transfar * out_one_inc_level;
+                    nextAssembler.served[i] += transfar;
+                    nextAssembler.incServed[i] += transfar * out_one_inc_level;
                 }
             }
 
@@ -231,11 +231,11 @@ namespace AssemblerVerticalConstruction
             for (int l = 0; l < productCountsLen; l++)
             {
                 var maxCount = _this.productCounts[l] * 9;
-                if (_this.produced[l] < maxCount && assemblerPool[assemblerNextId].produced[l] > 0)
+                if (_this.produced[l] < maxCount && nextAssembler.produced[l] > 0)
                 {
-                    var count = Math.Min(transfarCount, assemblerPool[assemblerNextId].produced[l]);
+                    var count = Math.Min(transfarCount, nextAssembler.produced[l]);
                     _this.produced[l] += count;
-                    assemblerPool[assemblerNextId].produced[l] -= count;
+                    nextAssembler.produced[l] -= count;
                 }
             }
         }
