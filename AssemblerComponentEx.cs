@@ -194,15 +194,14 @@ namespace AssemblerVerticalConstruction
             int servedLen = _this.served.Length;
             for (int i = 0; i < servedLen; i++)
             {
-                int requireCount = _this.requireCounts[i];
                 int served = _this.served[i];
                 int nextNeeds = nextAssembler.requireCounts[i] * needsFactor - nextAssembler.served[i];
-                if (nextNeeds > 0 && served > requireCount)
+                if (nextNeeds > 0 && served > 0)
                 {
                     ref int incServed = ref _this.incServed[i];
 
-                    // assemblerIdに一回製造分より多い在庫があったらnextNeedsを満たすように余りをsemblerNextIdへ送る
-                    int transfar = Math.Min(served - requireCount, nextNeeds);
+                    // assemblerIdに素材の在庫があったらnextNeedsを満たすようにassemblerNextIdへ送る
+                    int transfar = Math.Min(served, nextNeeds);
 
                     if (incServed <= 0)
                     {
