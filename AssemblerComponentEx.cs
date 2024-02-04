@@ -179,13 +179,13 @@ namespace AssemblerVerticalConstruction
 
         private void UpdateOutputToNextInner(int assemblerId, int assemblerNextId, AssemblerComponent[] assemblerPool)
         {
-            var _this = assemblerPool[assemblerId];
+            ref var _this = ref assemblerPool[assemblerId];
             if (_this.served == null) // MEMO: レシピが空の場合はservedがnullになっている
             {
                 return;
             }
 
-            var nextAssembler = assemblerPool[assemblerNextId];
+            ref var nextAssembler = ref assemblerPool[assemblerNextId];
 
             // アセンブラが保管する素材のバッファの基本的な上限係数
             // AssemblerComponent.UpdateNeeds()のコードが元
