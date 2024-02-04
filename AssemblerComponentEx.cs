@@ -240,7 +240,7 @@ namespace AssemblerVerticalConstruction
         // AssemblerComponent.UpdateNeeds()のコードが元
         private static int getNeedsCount(AssemblerComponent assembler, int index)
         {
-            int num2 = 4 * assembler.speedOverride / 10000;
+            int num2 = assembler.speedOverride * 180 / assembler.timeSpend + 1;
             return assembler.requireCounts[index] * num2;
         }
 
