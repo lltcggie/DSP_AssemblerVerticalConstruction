@@ -466,19 +466,33 @@ namespace AssemblerVerticalConstruction
 
             if (WorkerThreadExecutor.CalculateMissionIndex(1, assemblerCursor - 1, _usedThreadCnt, _curThreadIdx, _minimumMissionCnt, out var _start, out var _end))
             {
-                for (int i = _start; i < _end; i++)
-                {
-                    bool useMutex = true;
-                    if (i == 1 || i == assemblerCursor - 1 || (_start < i && i < _end - 1))
-                    {
-                        // 他のスレッドから触られる恐れがない箇所はMutexを使わなくても大丈夫なはず
-                        useMutex = false;
-                    }
+                // useMutexの判定をfor内でやらなくて済むように部分的にループアンローリングしてる
 
-                    var NextId = assemblerComponentEx.GetNextId(factoryIndex, i);
-                    if (assemblerPool[i].id == i && NextId > 0)
+                int i = _start;
+                bool useMutex = i == 1;
+                var nextId = assemblerComponentEx.GetNextId(factoryIndex, i);
+                if (assemblerPool[i].id == i && nextId > 0)
+                {
+                    assemblerComponentEx.UpdateOutputToNext(factory, factoryIndex, i, assemblerPool, nextId, useMutex);
+                }
+
+                for (i = _start + 1; i < _end - 1; i++)
+                {
+                    nextId = assemblerComponentEx.GetNextId(factoryIndex, i);
+                    if (assemblerPool[i].id == i && nextId > 0)
                     {
-                        assemblerComponentEx.UpdateOutputToNext(factory, factoryIndex, i, assemblerPool, NextId, useMutex);
+                        assemblerComponentEx.UpdateOutputToNext(factory, factoryIndex, i, assemblerPool, nextId, false);
+                    }
+                }
+
+                i = _end - 1;
+                if (i != _start)
+                {
+                    useMutex = i == 1;
+                    nextId = assemblerComponentEx.GetNextId(factoryIndex, i);
+                    if (assemblerPool[i].id == i && nextId > 0)
+                    {
+                        assemblerComponentEx.UpdateOutputToNext(factory, factoryIndex, i, assemblerPool, nextId, useMutex);
                     }
                 }
             }

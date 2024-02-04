@@ -187,12 +187,16 @@ namespace AssemblerVerticalConstruction
 
             var nextAssembler = assemblerPool[assemblerNextId];
 
-            int num = _this.served.Length;
-            for (int i = 0; i < num; i++)
+            // アセンブラが保管する素材のバッファの基本的な上限係数
+            // AssemblerComponent.UpdateNeeds()のコードが元
+            int needsFactor = nextAssembler.speedOverride * 180 / nextAssembler.timeSpend + 1;
+
+            int servedLen = _this.served.Length;
+            for (int i = 0; i < servedLen; i++)
             {
                 int requireCount = _this.requireCounts[i];
                 int served = _this.served[i];
-                int nextNeeds = getNeedsCount(nextAssembler, i) - nextAssembler.served[i];
+                int nextNeeds = nextAssembler.requireCounts[i] * needsFactor - nextAssembler.served[i];
                 if (nextNeeds > 0 && served > requireCount)
                 {
                     ref int incServed = ref _this.incServed[i];
@@ -224,7 +228,8 @@ namespace AssemblerVerticalConstruction
                 }
             }
 
-            for (int l = 0; l < _this.productCounts.Length; l++)
+            var productCountsLen = _this.productCounts.Length;
+            for (int l = 0; l < productCountsLen; l++)
             {
                 var maxCount = _this.productCounts[l] * 9;
                 if (_this.produced[l] < maxCount && assemblerPool[assemblerNextId].produced[l] > 0)
@@ -234,14 +239,6 @@ namespace AssemblerVerticalConstruction
                     assemblerPool[assemblerNextId].produced[l] -= count;
                 }
             }
-        }
-
-        // アセンブラが保管する素材のバッファの基本的な上限
-        // AssemblerComponent.UpdateNeeds()のコードが元
-        private static int getNeedsCount(AssemblerComponent assembler, int index)
-        {
-            int num2 = assembler.speedOverride * 180 / assembler.timeSpend + 1;
-            return assembler.requireCounts[index] * num2;
         }
 
         // AssemblerComponent.split_inc_level()がオリジナル
