@@ -7,6 +7,9 @@ Originally released by FYJ95 [here](https://dsp.thunderstore.io/package/57a103a4
 
 ## 更新履歴
 
+### v1.1.4
+- 最適化
+
 ### v1.1.3
 - スタックしたアセンブラが持つ素材の在庫数をV0.10.29.28154の仕様に合わせた
 - アセンブラが所持している素材の在庫を制限なく上のアセンブラへ送るように変更
